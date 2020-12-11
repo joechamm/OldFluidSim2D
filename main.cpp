@@ -24,22 +24,21 @@ unsigned FrameCount = 0;
 
 time_t current, initial;
 
-GLSLShader prog_render, prog_setup, prog_advect;
+GLSLShader prog_render, prog_setup;
 
 GLsizeiptr vertPosSize, vertTexSize;
 
 GLenum
 setup_drawBuffs[2],
-advect_drawBuffs[2],
 window_drawBuffs[2];
 
 GLuint
 vbo_handle,
-setup_tbo[2],
 fbo_handles[2],
 vel_tex[2],
 temp_tex[2],
-setup_tex[2];
+setup_tex[2],
+setup_tbo[2];
 
 // GLUI Variables
 
@@ -50,8 +49,7 @@ int mouseX, mouseY;
 bool mouseDown;
 
 int
-current_subroutine,
-current_fbo;
+current_subroutine;
 
 GLuint
 tempSubIdx,
@@ -60,9 +58,6 @@ velSubIdx;
 GLuint
 fboWidth,
 fboHeight;
-
-GLfloat
-dt;
 
 void InitWindow(int, char**);
 void InitFBO(void);
@@ -93,9 +88,6 @@ void DrawSquare(void);
 void ResetState(void);
 void Reset(void);
 
-void Update(void);
-void Advect(void);
-
 void PrintProgInfo(GLuint);
 
 static float* LoadFloatData(const char* szFile, int* count);
@@ -115,6 +107,7 @@ int main(int argc, char** argv)
 	SetupFBO();
 
 	CheckFramebuffers();
+	CheckTextures();
 
 	glutMainLoop();
 	return 0;
@@ -188,19 +181,19 @@ void InitWindow(int argc, char** argv)
 
 void InitTexture(void)
 {
-	GLuint xDivSize = (fboWidth / 7);
-	GLuint yDivSize = (fboHeight / 7);
+	GLuint xDivSize = (512 / 7);
+	GLuint yDivSize = (512 / 7);
 	GLuint idx, i, j;
 	GLfloat val, xvel, yvel, maxTemp, minTemp;
 	maxTemp = 1.0f;
 	minTemp = -1.0f;
 
-	GLfloat* velPixels = new GLfloat[(fboWidth * fboHeight * 2)];
-	GLfloat* tempPixels = new GLfloat[(fboWidth * fboHeight)];
+	GLfloat* velPixels = new GLfloat[(512 * 512 * 2)];
+	GLfloat* tempPixels = new GLfloat[(512 * 512)];
 
-	for (i = 0; i < fboHeight; i++)
+	for (i = 0; i < 512; i++)
 	{
-		for (j = 0; j < fboWidth; j++)
+		for (j = 0; j < 512; j++)
 		{
 			idx = (i * 512 + j);
 
@@ -238,17 +231,6 @@ void InitTexture(void)
 		}
 	}
 
-	cout << "sizeof(velPixels): " << sizeof(velPixels) << endl;
-	cout << "sizeof(tempPixels): " << sizeof(tempPixels) << endl;
-
-	glBindBuffer(GL_TEXTURE_BUFFER, setup_tbo[0]);
-	glBufferData(GL_TEXTURE_BUFFER, (fboWidth * fboHeight * 2 * sizeof(GLfloat)), velPixels, GL_STATIC_DRAW);
-	glBindBuffer(GL_TEXTURE_BUFFER, 0);
-
-	glBindBuffer(GL_TEXTURE_BUFFER, setup_tbo[1]);
-	glBufferData(GL_TEXTURE_BUFFER, (fboWidth * fboHeight * sizeof(GLfloat)), tempPixels, GL_STATIC_DRAW);
-	glBindBuffer(GL_TEXTURE_BUFFER, 0);
-
 	if (glIsTexture(setup_tex[0]))
 	{
 		glDeleteTextures(2, setup_tex);
@@ -257,13 +239,25 @@ void InitTexture(void)
 	glGenTextures(2, setup_tex);
 
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_BUFFER, setup_tex[0]);
-	glTexBuffer(GL_TEXTURE_BUFFER, GL_RG32F, setup_tbo[0]);
-	glBindTexture(GL_TEXTURE_BUFFER, 0);
+	glBindTexture(GL_TEXTURE_2D, setup_tex[0]);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-	glBindTexture(GL_TEXTURE_BUFFER, setup_tex[1]);
-	glTexBuffer(GL_TEXTURE_BUFFER, GL_R32F, setup_tbo[1]);
-	glBindTexture(GL_TEXTURE_BUFFER, 0);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, 512, 512, 0, GL_RED, GL_FLOAT, tempPixels);
+
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	glBindTexture(GL_TEXTURE_2D, setup_tex[1]);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32F, 512, 512, 0, GL_RG, GL_FLOAT, velPixels);
+
+	glBindTexture(GL_TEXTURE_2D, 0);
 
 	delete[] tempPixels;
 	delete[] velPixels;
@@ -443,21 +437,10 @@ void InitShaders(void)
 	prog_setup.LoadFromFileWithPPD(GL_VERTEX_SHADER, "..\\shader.vs.glsl", prePD);
 	prog_setup.LoadFromFileWithPPD(GL_FRAGMENT_SHADER, "..\\setup.fs.glsl", prePD);
 	prog_setup.CreateAndLinkProgram();
-	prog_setup.AddUniform("VelocityBuffer");
-	prog_setup.AddUniform("TemperatureBuffer");
+	prog_setup.AddUniform("VelocityTexture");
+	prog_setup.AddUniform("TemperatureTexture");
 	prog_setup.AddUniform("GridWidth");
 	prog_setup.AddUniform("GridHeight");
-
-	cout << "Attempting to load advect shader" << endl;
-
-	prog_advect.LoadFromFileWithPPD(GL_VERTEX_SHADER, "..\\shader.vs.glsl", prePD);
-	prog_advect.LoadFromFileWithPPD(GL_FRAGMENT_SHADER, "..\\advect.fs.glsl", prePD);
-	prog_advect.CreateAndLinkProgram();
-	prog_advect.AddUniform("VelocityTexture");
-	prog_advect.AddUniform("TemperatureTexture");
-	prog_advect.AddUniform("GridWidth");
-	prog_advect.AddUniform("GridHeight");
-	prog_advect.AddUniform("dt");
 }
 
 void SetupFBO(void)
@@ -474,13 +457,13 @@ void SetupFBO(void)
 	glDrawBuffers(2, setup_drawBuffs);
 
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_BUFFER, setup_tex[0]);
+	glBindTexture(GL_TEXTURE_2D, setup_tex[1]);
 	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_BUFFER, setup_tex[1]);
+	glBindTexture(GL_TEXTURE_2D, setup_tex[0]);
 
 	prog_setup.Use();
-	glUniform1i(prog_setup("VelocityBuffer"), 0);
-	glUniform1i(prog_setup("TemperatureBuffer"), 1);
+	glUniform1i(prog_setup("VelocityTexture"), 0);
+	glUniform1i(prog_setup("TemperatureTexture"), 1);
 	glUniform1i(prog_setup("GridWidth"), fboWidth);
 	glUniform1i(prog_setup("GridHeight"), fboHeight);
 
@@ -522,14 +505,11 @@ void InitBuffers(void)
 	GLsizei buff_size = vertPosSize;
 
 	glGenBuffers(1, &vbo_handle);
-
 	glBindBuffer(GL_ARRAY_BUFFER, vbo_handle);
 	glBufferData(GL_ARRAY_BUFFER, buff_size, NULL, GL_STATIC_DRAW);
 	glBufferSubData(GL_ARRAY_BUFFER, 0, vertPosSize, vertices);
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-	glGenBuffers(2, setup_tbo);
 }
 
 void Reshape(int w, int h)
@@ -575,10 +555,6 @@ void Keyboard(unsigned char key, int x, int y)
 {
 	switch (key)
 	{
-	case 'u':
-		cout << "updating" << endl;
-		Update();
-		break;
 	case 'l':
 		CheckFramebuffers();
 		break;
@@ -613,16 +589,9 @@ void InitGlobals(void)
 	setup_drawBuffs[0] = GL_COLOR_ATTACHMENT0;
 	setup_drawBuffs[1] = GL_COLOR_ATTACHMENT1;
 
-	advect_drawBuffs[0] = GL_COLOR_ATTACHMENT0;
-	advect_drawBuffs[1] = GL_COLOR_ATTACHMENT1;
-
 	window_drawBuffs[0] = GL_BACK;
 
 	current_subroutine = 0;
-
-	current_fbo = 0;
-
-	dt = 0.01f;
 }
 
 void ResetState(void)
@@ -630,12 +599,9 @@ void ResetState(void)
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glBindTexture(GL_TEXTURE_RECTANGLE, 0);
-	glBindTexture(GL_TEXTURE_BUFFER, 0);
-
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glBindTexture(GL_TEXTURE_RECTANGLE, 0);
-	glBindTexture(GL_TEXTURE_BUFFER, 0);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
@@ -665,9 +631,9 @@ void DrawSquare(void)
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_RECTANGLE, vel_tex[current_fbo]);
+	glBindTexture(GL_TEXTURE_RECTANGLE, vel_tex[0]);
 	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_RECTANGLE, temp_tex[current_fbo]);
+	glBindTexture(GL_TEXTURE_RECTANGLE, temp_tex[0]);
 
 	prog_render.Use();
 
@@ -690,54 +656,13 @@ void DrawSquare(void)
 
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 
-	glDisableVertexAttribArray(0);
-
-	glUseProgram(0);
-
-	glBindTexture(GL_TEXTURE_RECTANGLE, 0);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_RECTANGLE, 0);
-}
-
-void Update(void)
-{
-	Advect();
-
-	current_fbo = 1 - current_fbo;
-}
-
-void Advect(void)
-{
-	int other_idx = 1 - current_fbo;
-
-	glViewport(0, 0, fboWidth, fboHeight);
-
-	glBindFramebuffer(GL_FRAMEBUFFER, fbo_handles[current_fbo]);
-	glDrawBuffers(2, advect_drawBuffs);
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_RECTANGLE, vel_tex[other_idx]);
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_RECTANGLE, temp_tex[other_idx]);
-
-	prog_advect.Use();
-	glUniform1i(prog_advect("VelocityTexture"), 0);
-	glUniform1i(prog_advect("TemperatureTexture"), 1);
-	glUniform1i(prog_advect("GridWidth"), fboWidth);
-	glUniform1i(prog_advect("GridHeight"), fboHeight);
-	glUniform1f(prog_advect("dt"), dt);
-
-	glBindBuffer(GL_ARRAY_BUFFER, vbo_handle);
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
-
-	glDrawArrays(GL_TRIANGLES, 0, 6);
-
-	glDisableVertexAttribArray(0);
 
 	glUseProgram(0);
 
-	ResetState();
+	glBindTexture(GL_TEXTURE_RECTANGLE, 0);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_RECTANGLE, 0);
 }
 
 void Reset(void)
@@ -1059,6 +984,9 @@ void PrintTextureValues(GLuint tex_handle, GLuint nComponents)
 
 void CheckTextures(void)
 {
+	PrintTexture(setup_tex[0]);
+	cout << "checking setup_tex1" << endl;
+	PrintTexture(setup_tex[1]);
 	cout << "checking temp_tex0" << endl;
 	PrintTexture(temp_tex[0]);
 	cout << "checking temp_tex1" << endl;
