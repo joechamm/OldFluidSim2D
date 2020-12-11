@@ -273,16 +273,17 @@ void InitFBO(void)
 	glGenTextures(2, vel_tex);
 
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_RECTANGLE, temp_tex[0]);
 
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glBindTexture(GL_TEXTURE_2D, temp_tex[0]);
 
-	glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_R32F, fboWidth, fboHeight, 0, GL_RED, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-	glBindTexture(GL_TEXTURE_RECTANGLE, 0);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, 512, 512, 0, GL_RED, GL_FLOAT, NULL);
+
+	glBindTexture(GL_TEXTURE_2D, 0);
 
 	err = glGetError();
 
@@ -295,16 +296,16 @@ void InitFBO(void)
 		cout << "No Errors." << endl;
 	}
 
-	glBindTexture(GL_TEXTURE_RECTANGLE, temp_tex[1]);
+	glBindTexture(GL_TEXTURE_2D, temp_tex[1]);
 
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-	glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_R32F, fboWidth, fboHeight, 0, GL_RED, GL_FLOAT, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, fboWidth, fboHeight, 0, GL_RED, GL_FLOAT, NULL);
 
-	glBindTexture(GL_TEXTURE_RECTANGLE, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
 
 	err = glGetError();
 
@@ -317,16 +318,16 @@ void InitFBO(void)
 		cout << "No Errors." << endl;
 	}
 
-	glBindTexture(GL_TEXTURE_RECTANGLE, vel_tex[0]);
+	glBindTexture(GL_TEXTURE_2D, vel_tex[0]);
 
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-	glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RG32F, fboWidth, fboHeight, 0, GL_RG, GL_FLOAT, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32F, fboWidth, fboHeight, 0, GL_RG, GL_FLOAT, NULL);
 
-	glBindTexture(GL_TEXTURE_RECTANGLE, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
 
 	err = glGetError();
 
@@ -339,16 +340,16 @@ void InitFBO(void)
 		cout << "No Errors." << endl;
 	}
 
-	glBindTexture(GL_TEXTURE_RECTANGLE, vel_tex[1]);
+	glBindTexture(GL_TEXTURE_2D, vel_tex[1]);
 
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-	glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RG32F, fboWidth, fboHeight, 0, GL_RG, GL_FLOAT, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32F, fboWidth, fboHeight, 0, GL_RG, GL_FLOAT, NULL);
 
-	glBindTexture(GL_TEXTURE_RECTANGLE, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
 
 	err = glGetError();
 
@@ -363,8 +364,8 @@ void InitFBO(void)
 
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo_handles[0]);
 
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE, vel_tex[0], 0);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_RECTANGLE, temp_tex[0], 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, vel_tex[0], 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, temp_tex[0], 0);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -381,8 +382,8 @@ void InitFBO(void)
 
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo_handles[1]);
 
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE, vel_tex[1], 0);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_RECTANGLE, temp_tex[1], 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, vel_tex[1], 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, temp_tex[1], 0);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -596,12 +597,12 @@ void InitGlobals(void)
 
 void ResetState(void)
 {
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, 0);
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, 0);
-	glBindTexture(GL_TEXTURE_RECTANGLE, 0);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, 0);
-	glBindTexture(GL_TEXTURE_RECTANGLE, 0);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
@@ -631,9 +632,9 @@ void DrawSquare(void)
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_RECTANGLE, vel_tex[0]);
+	glBindTexture(GL_TEXTURE_2D, vel_tex[0]);
 	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_RECTANGLE, temp_tex[0]);
+	glBindTexture(GL_TEXTURE_2D, temp_tex[0]);
 
 	prog_render.Use();
 
@@ -660,9 +661,7 @@ void DrawSquare(void)
 
 	glUseProgram(0);
 
-	glBindTexture(GL_TEXTURE_RECTANGLE, 0);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_RECTANGLE, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 void Reset(void)
