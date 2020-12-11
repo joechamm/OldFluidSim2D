@@ -24,29 +24,21 @@ unsigned FrameCount = 0;
 
 time_t current, initial;
 
-GLSLShader prog_render, prog_setup, prog_advect, prog_divergence, prog_gradient, prog_force_buoy, prog_pressure;
+GLSLShader prog_render, prog_setup, prog_advect;
 
 GLsizeiptr vertPosSize, vertTexSize;
 
 GLenum
-setup_drawBuffs[4],
-advect_drawBuffs[4],
-force_drawBuffs[4],
-grad_drawBuffs[4],
-press_drawBuffs[4],
-div_drawBuffs[1],
+setup_drawBuffs[2],
+advect_drawBuffs[2],
 window_drawBuffs[2];
 
 GLuint
 vbo_handle,
 setup_tbo[2],
 fbo_handles[2],
-fbo_div,
 vel_tex[2],
 temp_tex[2],
-press_tex[2],
-dens_tex[2],
-div_tex,
 setup_tex[2];
 
 // GLUI Variables
@@ -70,9 +62,6 @@ fboWidth,
 fboHeight;
 
 GLfloat
-Kappa,
-Sigma,
-AmbientTemperature,
 dt;
 
 void InitWindow(int, char**);
@@ -106,14 +95,12 @@ void Reset(void);
 
 void Update(void);
 void Advect(void);
-void Buoyancy(void);
-void Pressure(void);
-void CalcDivergence(void);
-void SubGradient(void);
 
 void PrintProgInfo(GLuint);
 
 static float* LoadFloatData(const char* szFile, int* count);
+
+GLfloat Uniform(GLfloat a, GLfloat b);
 
 int main(int argc, char** argv)
 {
@@ -246,8 +233,8 @@ void InitTexture(void)
 			}
 
 			tempPixels[idx] = val;
-			velPixels[(2 * idx)] = 1.0f;
-			velPixels[(2 * idx) + 1] = 0.0f;
+			velPixels[(2 * idx)] = xvel;
+			velPixels[(2 * idx) + 1] = yvel;
 		}
 	}
 
@@ -287,59 +274,11 @@ void InitFBO(void)
 	GLenum err;
 
 	glGenFramebuffers(2, fbo_handles);
-	glGenFramebuffers(1, &fbo_div);
 
 	glGenTextures(2, temp_tex);
 	glGenTextures(2, vel_tex);
-	glGenTextures(2, press_tex);
-	glGenTextures(2, dens_tex);
-	glGenTextures(1, &div_tex);
 
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_RECTANGLE, vel_tex[0]);
-
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-	glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RG32F, fboWidth, fboHeight, 0, GL_RG, GL_FLOAT, NULL);
-
-	glBindTexture(GL_TEXTURE_RECTANGLE, 0);
-
-	err = glGetError();
-
-	if (err != GL_NO_ERROR)
-	{
-		cout << "Error after attempting to bind vel_tex[0]. Code is: " << glGetString(err) << endl;
-	}
-	else
-	{
-		cout << "No Errors." << endl;
-	}
-
-	glBindTexture(GL_TEXTURE_RECTANGLE, vel_tex[1]);
-
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-	glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RG32F, fboWidth, fboHeight, 0, GL_RG, GL_FLOAT, NULL);
-
-	glBindTexture(GL_TEXTURE_RECTANGLE, 0);
-
-	err = glGetError();
-
-	if (err != GL_NO_ERROR)
-	{
-		cout << "Error after attempting to bind vel_tex[1]. Code is: " << glGetString(err) << endl;
-	}
-	else
-	{
-		cout << "No Errors." << endl;
-	}
-
 	glBindTexture(GL_TEXTURE_RECTANGLE, temp_tex[0]);
 
 	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -384,14 +323,14 @@ void InitFBO(void)
 		cout << "No Errors." << endl;
 	}
 
-	glBindTexture(GL_TEXTURE_RECTANGLE, press_tex[0]);
+	glBindTexture(GL_TEXTURE_RECTANGLE, vel_tex[0]);
 
 	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-	glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_R32F, fboWidth, fboHeight, 0, GL_RED, GL_FLOAT, NULL);
+	glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RG32F, fboWidth, fboHeight, 0, GL_RG, GL_FLOAT, NULL);
 
 	glBindTexture(GL_TEXTURE_RECTANGLE, 0);
 
@@ -399,21 +338,21 @@ void InitFBO(void)
 
 	if (err != GL_NO_ERROR)
 	{
-		cout << "Error after attempting to bind press_tex[0]. Code is: " << glGetString(err) << endl;
+		cout << "Error after attempting to bind vel_tex[0]. Code is: " << glGetString(err) << endl;
 	}
 	else
 	{
 		cout << "No Errors." << endl;
 	}
 
-	glBindTexture(GL_TEXTURE_RECTANGLE, press_tex[1]);
+	glBindTexture(GL_TEXTURE_RECTANGLE, vel_tex[1]);
 
 	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-	glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_R32F, fboWidth, fboHeight, 0, GL_RED, GL_FLOAT, NULL);
+	glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RG32F, fboWidth, fboHeight, 0, GL_RG, GL_FLOAT, NULL);
 
 	glBindTexture(GL_TEXTURE_RECTANGLE, 0);
 
@@ -421,73 +360,7 @@ void InitFBO(void)
 
 	if (err != GL_NO_ERROR)
 	{
-		cout << "Error after attempting to bind press_tex[1]. Code is: " << glGetString(err) << endl;
-	}
-	else
-	{
-		cout << "No Errors." << endl;
-	}
-
-	glBindTexture(GL_TEXTURE_RECTANGLE, dens_tex[0]);
-
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-	glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_R32F, fboWidth, fboHeight, 0, GL_RED, GL_FLOAT, NULL);
-
-	glBindTexture(GL_TEXTURE_RECTANGLE, 0);
-
-	err = glGetError();
-
-	if (err != GL_NO_ERROR)
-	{
-		cout << "Error after attempting to bind dens_tex[0]. Code is: " << glGetString(err) << endl;
-	}
-	else
-	{
-		cout << "No Errors." << endl;
-	}
-
-	glBindTexture(GL_TEXTURE_RECTANGLE, dens_tex[1]);
-
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-	glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_R32F, fboWidth, fboHeight, 0, GL_RED, GL_FLOAT, NULL);
-
-	glBindTexture(GL_TEXTURE_RECTANGLE, 0);
-
-	err = glGetError();
-
-	if (err != GL_NO_ERROR)
-	{
-		cout << "Error after attempting to bind dens_tex[1]. Code is: " << glGetString(err) << endl;
-	}
-	else
-	{
-		cout << "No Errors." << endl;
-	}
-
-	glBindTexture(GL_TEXTURE_RECTANGLE, div_tex);
-
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-	glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_R32F, fboWidth, fboHeight, 0, GL_RED, GL_FLOAT, NULL);
-
-	glBindTexture(GL_TEXTURE_RECTANGLE, 0);
-
-	err = glGetError();
-
-	if (err != GL_NO_ERROR)
-	{
-		cout << "Error after attempting to bind div_tex. Code is: " << glGetString(err) << endl;
+		cout << "Error after attempting to bind vel_tex[1]. Code is: " << glGetString(err) << endl;
 	}
 	else
 	{
@@ -498,8 +371,6 @@ void InitFBO(void)
 
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE, vel_tex[0], 0);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_RECTANGLE, temp_tex[0], 0);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_RECTANGLE, press_tex[0], 0);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_RECTANGLE, dens_tex[0], 0);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -518,8 +389,6 @@ void InitFBO(void)
 
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE, vel_tex[1], 0);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_RECTANGLE, temp_tex[1], 0);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_RECTANGLE, press_tex[1], 0);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_RECTANGLE, dens_tex[1], 0);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -528,23 +397,6 @@ void InitFBO(void)
 	if (err != GL_NO_ERROR)
 	{
 		cout << "Error after attempting to bind setup_fbo[1]. Code is: " << glGetString(err) << endl;
-	}
-	else
-	{
-		cout << "No Errors." << endl;
-	}
-
-	glBindFramebuffer(GL_FRAMEBUFFER, fbo_div);
-
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE, div_tex, 0);
-
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-	err = glGetError();
-
-	if (err != GL_NO_ERROR)
-	{
-		cout << "Error after attempting to bind div_fbo. Code is: " << glGetString(err) << endl;
 	}
 	else
 	{
@@ -606,51 +458,6 @@ void InitShaders(void)
 	prog_advect.AddUniform("GridWidth");
 	prog_advect.AddUniform("GridHeight");
 	prog_advect.AddUniform("dt");
-
-	cout << "Attempting to load divergence shader" << endl;
-
-	prog_divergence.LoadFromFileWithPPD(GL_VERTEX_SHADER, "..\\shader.vs.glsl", prePD);
-	prog_divergence.LoadFromFileWithPPD(GL_FRAGMENT_SHADER, "..\\divergence.fs.glsl", prePD);
-	prog_divergence.CreateAndLinkProgram();
-	prog_divergence.AddUniform("VelocityTexture");
-	prog_divergence.AddUniform("GridWidth");
-	prog_divergence.AddUniform("GridHeight");
-
-	cout << "Attempting to load buoyancy shader" << endl;
-
-	prog_force_buoy.LoadFromFileWithPPD(GL_VERTEX_SHADER, "..\\shader.vs.glsl", prePD);
-	prog_force_buoy.LoadFromFileWithPPD(GL_FRAGMENT_SHADER, "..\\force_buoyancy.fs.glsl", prePD);
-	prog_force_buoy.CreateAndLinkProgram();
-	prog_force_buoy.AddUniform("VelocityTexture");
-	prog_force_buoy.AddUniform("TemperatureTexture");
-	prog_force_buoy.AddUniform("DensityTexture");
-	prog_force_buoy.AddUniform("GridWidth");
-	prog_force_buoy.AddUniform("GridHeight");
-	prog_force_buoy.AddUniform("AmbientTemperature");
-	prog_force_buoy.AddUniform("Kappa");
-	prog_force_buoy.AddUniform("Sigma");
-	prog_force_buoy.AddUniform("dt");
-
-	cout << "Attempting to load gradient shader" << endl;
-
-	prog_gradient.LoadFromFileWithPPD(GL_VERTEX_SHADER, "..\\shader.vs.glsl", prePD);
-	prog_gradient.LoadFromFileWithPPD(GL_FRAGMENT_SHADER, "..\\gradient.fs.glsl", prePD);
-	prog_gradient.CreateAndLinkProgram();
-	prog_gradient.AddUniform("VelocityTexture");
-	prog_gradient.AddUniform("PressureTexture");
-	prog_gradient.AddUniform("GridWidth");
-	prog_gradient.AddUniform("GridHeight");
-
-	cout << "Attempting to load pressure shader" << endl;
-
-	prog_pressure.LoadFromFileWithPPD(GL_VERTEX_SHADER, "..\\shader.vs.glsl", prePD);
-	prog_pressure.LoadFromFileWithPPD(GL_FRAGMENT_SHADER, "..\\jacobi_pressure.fs.glsl", prePD);
-	prog_pressure.CreateAndLinkProgram();
-	prog_pressure.AddUniform("PressureTexture");
-	prog_pressure.AddUniform("DivergenceTexture");
-	prog_pressure.AddUniform("GridWidth");
-	prog_pressure.AddUniform("GridHeight");
-
 }
 
 void SetupFBO(void)
@@ -661,12 +468,10 @@ void SetupFBO(void)
 	glViewport(0, 0, fboWidth, fboHeight);
 
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-
-	glBindFramebuffer(GL_FRAMEBUFFER, fbo_div);
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo_handles[0]);
-	glDrawBuffers(4, setup_drawBuffs);
+	glDrawBuffers(2, setup_drawBuffs);
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_BUFFER, setup_tex[0]);
@@ -687,7 +492,7 @@ void SetupFBO(void)
 	glFlush();
 
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo_handles[1]);
-	glDrawBuffers(4, setup_drawBuffs);
+	glDrawBuffers(2, setup_drawBuffs);
 
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 	glFlush();
@@ -807,30 +612,9 @@ void InitGlobals(void)
 
 	setup_drawBuffs[0] = GL_COLOR_ATTACHMENT0;
 	setup_drawBuffs[1] = GL_COLOR_ATTACHMENT1;
-	setup_drawBuffs[2] = GL_COLOR_ATTACHMENT2;
-	setup_drawBuffs[3] = GL_COLOR_ATTACHMENT3;
 
 	advect_drawBuffs[0] = GL_COLOR_ATTACHMENT0;
 	advect_drawBuffs[1] = GL_COLOR_ATTACHMENT1;
-	advect_drawBuffs[2] = GL_COLOR_ATTACHMENT3;
-	advect_drawBuffs[3] = GL_NONE;
-
-	force_drawBuffs[0] = GL_COLOR_ATTACHMENT0;
-	force_drawBuffs[1] = GL_NONE;
-	force_drawBuffs[2] = GL_NONE;
-	force_drawBuffs[3] = GL_NONE;
-
-	grad_drawBuffs[0] = GL_COLOR_ATTACHMENT0;
-	grad_drawBuffs[1] = GL_NONE;
-	grad_drawBuffs[2] = GL_NONE;
-	grad_drawBuffs[3] = GL_NONE;
-
-	press_drawBuffs[0] = GL_COLOR_ATTACHMENT2;
-	press_drawBuffs[1] = GL_NONE;
-	press_drawBuffs[2] = GL_NONE;
-	press_drawBuffs[3] = GL_NONE;
-
-	div_drawBuffs[0] = GL_COLOR_ATTACHMENT0;
 
 	window_drawBuffs[0] = GL_BACK;
 
@@ -839,19 +623,10 @@ void InitGlobals(void)
 	current_fbo = 0;
 
 	dt = 0.01f;
-
-	AmbientTemperature = 0.0f;
-	Kappa = 0.5f * 20.0f * dt;
-	Sigma = 1.0f;
 }
 
 void ResetState(void)
 {
-	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D, 0);
-	glBindTexture(GL_TEXTURE_RECTANGLE, 0);
-	glBindTexture(GL_TEXTURE_BUFFER, 0);
-
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glBindTexture(GL_TEXTURE_RECTANGLE, 0);
@@ -869,31 +644,7 @@ void ClearFBO(GLuint buffIdx, GLuint fboIdx, GLfloat clear_val)
 {
 	// buffIdx corresponds to: 0 - setup, 1 - advec, 2 - divergence, 3 - force, 4 - gradient, 5 - pressure
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo_handles[fboIdx]);
-
-	if (buffIdx == 0)
-	{
-		glDrawBuffers(4, setup_drawBuffs);
-	}
-	else if (buffIdx == 1)
-	{
-		glDrawBuffers(4, advect_drawBuffs);
-	}
-	else if (buffIdx == 2)
-	{
-		glDrawBuffers(1, div_drawBuffs);
-	}
-	else if (buffIdx == 3)
-	{
-		glDrawBuffers(4, force_drawBuffs);
-	}
-	else if (buffIdx == 4)
-	{
-		glDrawBuffers(4, grad_drawBuffs);
-	}
-	else if (buffIdx == 5)
-	{
-		glDrawBuffers(4, press_drawBuffs);
-	}
+	glDrawBuffers(2, setup_drawBuffs);
 
 	glClearColor(clear_val, clear_val, clear_val, clear_val);
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -953,19 +704,6 @@ void Update(void)
 	Advect();
 
 	current_fbo = 1 - current_fbo;
-
-	/*	Buoyancy();
-		current_fbo = 1 - current_fbo;
-		CalcDivergence();
-		current_fbo = 1 - current_fbo;
-		ClearFBO( 5, 0, 0.0f );
-		ClearFBO( 5, 1, 0.0f );
-		for(GLuint i = 0; i < 20; i++)
-		{
-			Pressure();
-			current_fbo = 1 - current_fbo;
-		}
-		SubGradient();*/
 }
 
 void Advect(void)
@@ -975,156 +713,19 @@ void Advect(void)
 	glViewport(0, 0, fboWidth, fboHeight);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo_handles[current_fbo]);
-	glDrawBuffers(4, advect_drawBuffs);
+	glDrawBuffers(2, advect_drawBuffs);
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_RECTANGLE, vel_tex[other_idx]);
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_RECTANGLE, temp_tex[other_idx]);
-	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_RECTANGLE, dens_tex[other_idx]);
 
 	prog_advect.Use();
 	glUniform1i(prog_advect("VelocityTexture"), 0);
 	glUniform1i(prog_advect("TemperatureTexture"), 1);
-	glUniform1i(prog_advect("DensityTexture"), 2);
 	glUniform1i(prog_advect("GridWidth"), fboWidth);
 	glUniform1i(prog_advect("GridHeight"), fboHeight);
 	glUniform1f(prog_advect("dt"), dt);
-
-	glBindBuffer(GL_ARRAY_BUFFER, vbo_handle);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
-
-	glDrawArrays(GL_TRIANGLES, 0, 6);
-
-	glDisableVertexAttribArray(0);
-
-	glUseProgram(0);
-
-	ResetState();
-}
-
-void Buoyancy(void)
-{
-	int other_idx = 1 - current_fbo;
-
-	glViewport(0, 0, fboWidth, fboHeight);
-
-	glBindFramebuffer(GL_FRAMEBUFFER, fbo_handles[current_fbo]);
-	glDrawBuffers(4, force_drawBuffs);
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_RECTANGLE, vel_tex[other_idx]);
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_RECTANGLE, temp_tex[other_idx]);
-	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_RECTANGLE, dens_tex[other_idx]);
-
-	prog_force_buoy.Use();
-	glUniform1i(prog_force_buoy("VelocityTexture"), 0);
-	glUniform1i(prog_force_buoy("TemperatureTexture"), 1);
-	glUniform1i(prog_force_buoy("DensityTexture"), 2);
-	glUniform1i(prog_force_buoy("GridWidth"), fboWidth);
-	glUniform1i(prog_force_buoy("GridHeight"), fboHeight);
-	glUniform1f(prog_force_buoy("AmbientTemperature"), AmbientTemperature);
-	glUniform1f(prog_force_buoy("Kappa"), Kappa);
-	glUniform1f(prog_force_buoy("Sigma"), Sigma);
-	glUniform1f(prog_force_buoy("dt"), dt);
-
-	glBindBuffer(GL_ARRAY_BUFFER, vbo_handle);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
-
-	glDrawArrays(GL_TRIANGLES, 0, 6);
-
-	glDisableVertexAttribArray(0);
-
-	glUseProgram(0);
-
-	ResetState();
-}
-
-void CalcDivergence(void)
-{
-	glViewport(0, 0, fboWidth, fboHeight);
-
-	glBindFramebuffer(GL_FRAMEBUFFER, fbo_div);
-	glDrawBuffers(1, div_drawBuffs);
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_RECTANGLE, vel_tex[current_fbo]);
-
-	prog_divergence.Use();
-	glUniform1i(prog_divergence("VelocityTexture"), 0);
-	glUniform1i(prog_divergence("GridWidth"), fboWidth);
-	glUniform1i(prog_divergence("GridHeight"), fboHeight);
-
-	glBindBuffer(GL_ARRAY_BUFFER, vbo_handle);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
-
-	glDrawArrays(GL_TRIANGLES, 0, 6);
-
-	glDisableVertexAttribArray(0);
-
-	glUseProgram(0);
-
-	ResetState();
-}
-
-void Pressure(void)
-{
-	int other_idx = 1 - current_fbo;
-
-	glViewport(0, 0, fboWidth, fboHeight);
-
-	glBindFramebuffer(GL_FRAMEBUFFER, fbo_handles[current_fbo]);
-	glDrawBuffers(4, press_drawBuffs);
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_RECTANGLE, press_tex[other_idx]);
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_RECTANGLE, div_tex);
-
-	prog_pressure.Use();
-	glUniform1i(prog_pressure("PressureTexture"), 0);
-	glUniform1i(prog_pressure("DivergenceTexture"), 1);
-	glUniform1i(prog_pressure("GridWidth"), fboWidth);
-	glUniform1i(prog_pressure("GridHeight"), fboHeight);
-
-	glBindBuffer(GL_ARRAY_BUFFER, vbo_handle);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
-
-	glDrawArrays(GL_TRIANGLES, 0, 6);
-
-	glDisableVertexAttribArray(0);
-
-	glUseProgram(0);
-
-	ResetState();
-}
-
-void SubGradient(void)
-{
-	int other_idx = 1 - current_fbo;
-
-	glViewport(0, 0, fboWidth, fboHeight);
-
-	glBindFramebuffer(GL_FRAMEBUFFER, fbo_handles[current_fbo]);
-	glDrawBuffers(4, grad_drawBuffs);
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_RECTANGLE, vel_tex[other_idx]);
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_RECTANGLE, press_tex[other_idx]);
-
-	prog_gradient.Use();
-	glUniform1i(prog_gradient("VelocityTexture"), 0);
-	glUniform1i(prog_gradient("PressureTexture"), 1);
-	glUniform1i(prog_gradient("GridWidth"), fboWidth);
-	glUniform1i(prog_gradient("GridHeight"), fboHeight);
 
 	glBindBuffer(GL_ARRAY_BUFFER, vbo_handle);
 	glEnableVertexAttribArray(0);
