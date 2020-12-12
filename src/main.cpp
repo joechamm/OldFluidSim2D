@@ -3,7 +3,6 @@
 #include<vector>
 #include<gl/glew.h>
 #include<gl/freeglut.h>
-//#include<glutils_save/GLSLShader.hpp>
 #include "glm/ext.hpp"
 
 #include "GLSLShader.h"
@@ -12,11 +11,7 @@
 using namespace std;
 using glm::value_ptr;
 
-//#pragma comment(lib,"glew32.lib")
-//#pragma comment(lib,"freeglut.lib")
-//#pragma comment(lib,"glutils.lib")
-
-#define WINDOW_TITLE_PREFIX "FluidTest09"
+#define WINDOW_TITLE_PREFIX "Fluid Sim 2D"
 
 static int CurrentWidth = 512;
 static int CurrentHeight = 512;
@@ -212,8 +207,8 @@ void InitTexture( void )
 	maxTemp = 1.0f;
 	minTemp = - 1.0f;
 
-	GLfloat *velPixels = new GLfloat[(fboWidth * fboHeight * 2)];
-	GLfloat *tempPixels = new GLfloat[(fboWidth * fboHeight)];
+	GLfloat * velPixels = new GLfloat[(fboWidth * fboHeight * 2)];
+	GLfloat * tempPixels = new GLfloat[(fboWidth * fboHeight)];
 
 	for(i = 0; i < fboHeight; i++)
 	{
@@ -574,13 +569,10 @@ void InitShaders( void )
 	GLuint prog_handle = 0;
 	GLuint uobj[9] = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
-	vector<string> prePD;
-	prePD.push_back("#version 440");
-
 	cout << "Attempting to load show shader" << endl;
 
-	prog_render.LoadFromFileWithPPD(GL_VERTEX_SHADER, "shaders\\shader.vs.glsl", prePD);
-	prog_render.LoadFromFileWithPPD(GL_FRAGMENT_SHADER, "shaders\\render.fs.glsl", prePD);
+	prog_render.LoadFromFile(GL_VERTEX_SHADER, "shaders\\shader.vs.glsl");
+	prog_render.LoadFromFile(GL_FRAGMENT_SHADER, "shaders\\render.fs.glsl");
 	prog_render.CreateAndLinkProgram();
 	prog_render.AddUniform("VelocityTexture");
 	prog_render.AddUniform("TemperatureTexture");
@@ -594,8 +586,8 @@ void InitShaders( void )
 
 	cout << "Attempting to load setup shader" << endl;
 
-	prog_setup.LoadFromFileWithPPD(GL_VERTEX_SHADER, "shaders\\shader.vs.glsl", prePD);
-	prog_setup.LoadFromFileWithPPD(GL_FRAGMENT_SHADER, "shaders\\setup.fs.glsl", prePD);
+	prog_setup.LoadFromFile(GL_VERTEX_SHADER, "shaders\\shader.vs.glsl");
+	prog_setup.LoadFromFile(GL_FRAGMENT_SHADER, "shaders\\setup.fs.glsl");
 	prog_setup.CreateAndLinkProgram();
 	prog_setup.AddUniform("VelocityBuffer");
 	prog_setup.AddUniform("TemperatureBuffer");
@@ -604,8 +596,8 @@ void InitShaders( void )
 
 	cout << "Attempting to load advect shader" << endl;
 
-	prog_advect.LoadFromFileWithPPD(GL_VERTEX_SHADER, "shaders\\shader.vs.glsl", prePD);
-	prog_advect.LoadFromFileWithPPD(GL_FRAGMENT_SHADER, "shaders\\advect.fs.glsl", prePD);
+	prog_advect.LoadFromFile(GL_VERTEX_SHADER, "shaders\\shader.vs.glsl");
+	prog_advect.LoadFromFile(GL_FRAGMENT_SHADER, "shaders\\advect.fs.glsl");
 	prog_advect.CreateAndLinkProgram();
 	prog_advect.AddUniform("VelocityTexture");
 	prog_advect.AddUniform("TemperatureTexture");
@@ -616,8 +608,8 @@ void InitShaders( void )
 
 	cout << "Attempting to load divergence shader" << endl;
 
-	prog_divergence.LoadFromFileWithPPD(GL_VERTEX_SHADER, "shaders\\shader.vs.glsl", prePD);
-	prog_divergence.LoadFromFileWithPPD(GL_FRAGMENT_SHADER, "shaders\\divergence.fs.glsl", prePD);
+	prog_divergence.LoadFromFile(GL_VERTEX_SHADER, "shaders\\shader.vs.glsl");
+	prog_divergence.LoadFromFile(GL_FRAGMENT_SHADER, "shaders\\divergence.fs.glsl");
 	prog_divergence.CreateAndLinkProgram();
 	prog_divergence.AddUniform("VelocityTexture");
 	prog_divergence.AddUniform("GridWidth");
@@ -625,8 +617,8 @@ void InitShaders( void )
 
 	cout << "Attempting to load buoyancy shader" << endl;
 
-	prog_force_buoy.LoadFromFileWithPPD(GL_VERTEX_SHADER, "shaders\\shader.vs.glsl", prePD);
-	prog_force_buoy.LoadFromFileWithPPD(GL_FRAGMENT_SHADER, "shaders\\force_buoyancy.fs.glsl", prePD);
+	prog_force_buoy.LoadFromFile(GL_VERTEX_SHADER, "shaders\\shader.vs.glsl");
+	prog_force_buoy.LoadFromFile(GL_FRAGMENT_SHADER, "shaders\\force_buoyancy.fs.glsl");
 	prog_force_buoy.CreateAndLinkProgram();
 	prog_force_buoy.AddUniform("VelocityTexture");
 	prog_force_buoy.AddUniform("TemperatureTexture");
@@ -640,8 +632,8 @@ void InitShaders( void )
 
 	cout << "Attempting to load gradient shader" << endl;
 
-	prog_gradient.LoadFromFileWithPPD(GL_VERTEX_SHADER, "shaders\\shader.vs.glsl", prePD);
-	prog_gradient.LoadFromFileWithPPD(GL_FRAGMENT_SHADER, "shaders\\gradient.fs.glsl", prePD);
+	prog_gradient.LoadFromFile(GL_VERTEX_SHADER, "shaders\\shader.vs.glsl");
+	prog_gradient.LoadFromFile(GL_FRAGMENT_SHADER, "shaders\\gradient.fs.glsl");
 	prog_gradient.CreateAndLinkProgram();
 	prog_gradient.AddUniform("VelocityTexture");
 	prog_gradient.AddUniform("PressureTexture");
@@ -650,8 +642,8 @@ void InitShaders( void )
 
 	cout << "Attempting to load pressure shader" << endl;
 
-	prog_pressure.LoadFromFileWithPPD(GL_VERTEX_SHADER, "shaders\\shader.vs.glsl", prePD);
-	prog_pressure.LoadFromFileWithPPD(GL_FRAGMENT_SHADER, "shaders\\jacobi_pressure.fs.glsl", prePD);
+	prog_pressure.LoadFromFile(GL_VERTEX_SHADER, "shaders\\shader.vs.glsl");
+	prog_pressure.LoadFromFile(GL_FRAGMENT_SHADER, "shaders\\jacobi_pressure.fs.glsl");
 	prog_pressure.CreateAndLinkProgram();
 	prog_pressure.AddUniform("PressureTexture");
 	prog_pressure.AddUniform("DivergenceTexture");

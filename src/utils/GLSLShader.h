@@ -14,23 +14,22 @@ class GLSLShader
 public:
 	GLSLShader(void);
 	~GLSLShader(void);
-	void LoadFromString(GLenum whichShader, const string source);
-	void LoadFromFile(GLenum whichShader, const string filename);
-	void LoadFromFileWithPPD(GLenum whichShader, const string filename, const vector<string>& preProcessorDirectives);
-	void CreateProgram(void);
-	void LinkProgram(void);
-	void LinkProgramWithTFF(GLenum type, GLuint numOutputs, const char** outputs);
-	void CreateAndLinkProgram();
+	bool LoadFromString(GLenum whichShader, const char * source);
+	bool LoadFromFile(GLenum whichShader, const char * filename);	
+	bool CreateProgram(void);
+	bool LinkProgram(void);
+	bool LinkProgramWithTFF(GLenum type, GLuint numOutputs, const char** outputs);
+	bool CreateAndLinkProgram();
 	void Use();
 	void UnUse();
-	GLuint AddAttribute(const string attribute);
-	GLuint AddUniform(const string uniform);
-	GLuint AddUniformBlock(const string uniformBlock);
+	GLuint AddAttribute(const char * attribute);
+	GLuint AddUniform(const char * uniform);
+	GLuint AddUniformBlock(const char * uniformBlock);
 	GLuint GetProgram() const;
 	//An indexer that returns the location of the attribute/uniform
-	GLuint operator[](const string attribute);
-	GLuint operator()(const string uniform);
-	GLuint GetUniformBlockIndex(const string uniformBlock);
+	GLuint operator[](const char * attribute);
+	GLuint operator()(const char * uniform);
+	GLuint GetUniformBlockIndex(const char * uniformBlock);
 	//Program deletion
 	void DeleteProgram();
 private:

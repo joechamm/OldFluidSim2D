@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="D:\workspace\OldFluidSim2D\build\CMakeFiles\15d35703d6a8e6d8a71af36c1ae6e910\generate.stamp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{2EDEA50A-63D7-3DBD-8E64-490DE91F2666}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

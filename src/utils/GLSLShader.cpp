@@ -1,15 +1,8 @@
 #include "GLSLShader.h"
 
-//A simple class for handling GLSL shader compilation
-//Author: Movania Muhammad Mobeen
-//Last Modified: February 2, 2011
-
-//#include<gl/glew.h>
 #include <GL/glew.h>
 #include<fstream>
 #include<iostream>
-
-//#pragma comment(lib,"glew32.lib")
 
 GLSLShader::GLSLShader(void) : _program(0),
 	_totalShaders(0),
@@ -32,12 +25,11 @@ GLSLShader::~GLSLShader(void)
 	_uniformBlockList.clear();
 }
 
-void GLSLShader::LoadFromString(GLenum type, const string source)
+bool GLSLShader::LoadFromString(GLenum type, const char * source)
 {
 	GLuint shader = glCreateShader(type);
 
-	const char* ptmp = source.c_str();
-	glShaderSource(shader, 1, &ptmp, NULL);
+	glShaderSource(shader, 1, &source, NULL);
 
 	//check whether the shader loads fine
 	GLint status;
@@ -51,16 +43,19 @@ void GLSLShader::LoadFromString(GLenum type, const string source)
 		glGetShaderInfoLog(shader, infoLogLength, NULL, infoLog);
 		cerr << "Compile log: " << infoLog << endl;
 		delete[] infoLog;
+		return false;
 	}
 	_shaders[_totalShaders++] = shader;
+	return true;
 }
 
-void GLSLShader::CreateProgram(void)
+bool GLSLShader::CreateProgram(void)
 {
 	_program = glCreateProgram();
+	return true;
 }
 
-void GLSLShader::LinkProgram(void)
+bool GLSLShader::LinkProgram(void)
 {
 	if (_shaders[VERTEX_SHADER] != 0)
 	{
@@ -96,6 +91,7 @@ void GLSLShader::LinkProgram(void)
 		glGetProgramInfoLog(_program, infoLogLength, NULL, infoLog);
 		cerr << "Link log: " << infoLog << endl;
 		delete[] infoLog;
+		return false;
 	}
 
 	glDeleteShader(_shaders[VERTEX_SHADER]);
@@ -103,9 +99,11 @@ void GLSLShader::LinkProgram(void)
 	glDeleteShader(_shaders[GEOMETRY_SHADER]);
 	glDeleteShader(_shaders[TESS_CONTROL_SHADER]);
 	glDeleteShader(_shaders[TESS_EVAL_SHADER]);
+
+	return true;
 }
 
-void GLSLShader::LinkProgramWithTFF(GLenum type, GLuint numOutputs, const char** outputs)
+bool GLSLShader::LinkProgramWithTFF(GLenum type, GLuint numOutputs, const char** outputs)
 {
 	if (_shaders[VERTEX_SHADER] != 0)
 	{
@@ -143,6 +141,7 @@ void GLSLShader::LinkProgramWithTFF(GLenum type, GLuint numOutputs, const char**
 		glGetProgramInfoLog(_program, infoLogLength, NULL, infoLog);
 		cerr << "Link log: " << infoLog << endl;
 		delete[] infoLog;
+		return false;
 	}
 
 	glDeleteShader(_shaders[VERTEX_SHADER]);
@@ -150,9 +149,11 @@ void GLSLShader::LinkProgramWithTFF(GLenum type, GLuint numOutputs, const char**
 	glDeleteShader(_shaders[GEOMETRY_SHADER]);
 	glDeleteShader(_shaders[TESS_CONTROL_SHADER]);
 	glDeleteShader(_shaders[TESS_EVAL_SHADER]);
+
+	return false;
 }
 
-void GLSLShader::CreateAndLinkProgram()
+bool GLSLShader::CreateAndLinkProgram()
 {
 	_program = glCreateProgram();
 	if (_shaders[VERTEX_SHADER] != 0)
@@ -189,6 +190,7 @@ void GLSLShader::CreateAndLinkProgram()
 		glGetProgramInfoLog(_program, infoLogLength, NULL, infoLog);
 		cerr << "Link log: " << infoLog << endl;
 		delete[] infoLog;
+		return false;
 	}
 
 	glDeleteShader(_shaders[VERTEX_SHADER]);
@@ -196,6 +198,8 @@ void GLSLShader::CreateAndLinkProgram()
 	glDeleteShader(_shaders[GEOMETRY_SHADER]);
 	glDeleteShader(_shaders[TESS_CONTROL_SHADER]);
 	glDeleteShader(_shaders[TESS_EVAL_SHADER]);
+
+	return true;
 }
 
 void GLSLShader::Use()
@@ -208,36 +212,36 @@ void GLSLShader::UnUse()
 	glUseProgram(0);
 }
 
-GLuint GLSLShader::AddAttribute(const string attribute)
+GLuint GLSLShader::AddAttribute(const char * attribute)
 {
-	GLuint idx = glGetAttribLocation(_program, attribute.c_str());
+	GLuint idx = glGetAttribLocation(_program, attribute);
 	_attributeList[attribute] = idx;
 	return idx;
 }
 
 //An indexer that returns the location of the attribute
-GLuint GLSLShader::operator [](const string attribute)
+GLuint GLSLShader::operator [](const char * attribute)
 {
 	return _attributeList[attribute];
 }
 
-GLuint GLSLShader::AddUniform(const string uniform)
+GLuint GLSLShader::AddUniform(const char * uniform)
 {
-	GLuint idx = glGetUniformLocation(_program, uniform.c_str());
+	GLuint idx = glGetUniformLocation(_program, uniform);
 	_uniformLocationList[uniform] = idx;
 	return idx;
 }
 
-GLuint GLSLShader::AddUniformBlock(const string uniformBlock)
+GLuint GLSLShader::AddUniformBlock(const char * uniformBlock)
 {
-	GLuint idx = glGetUniformBlockIndex(_program, uniformBlock.c_str());
+	GLuint idx = glGetUniformBlockIndex(_program, uniformBlock);
 	_uniformBlockList[uniformBlock] = idx;
 	glUniformBlockBinding(_program, idx, _currentBlockIdx);
 	_currentBlockIdx++;
 	return idx;
 }
 
-GLuint GLSLShader::operator()(const string uniform)
+GLuint GLSLShader::operator()(const char * uniform)
 {
 	return _uniformLocationList[uniform];
 }
@@ -247,15 +251,15 @@ GLuint GLSLShader::GetProgram() const
 	return _program;
 }
 
-GLuint GLSLShader::GetUniformBlockIndex(const string uniformBlock)
+GLuint GLSLShader::GetUniformBlockIndex(const char * uniformBlock)
 {
 	return _uniformBlockList[uniformBlock];
 }
 
-void GLSLShader::LoadFromFile(GLenum whichShader, const string filename)
+bool GLSLShader::LoadFromFile(GLenum whichShader, const char * filename)
 {
 	ifstream fp;
-	fp.open(filename.c_str(), ios_base::in);
+	fp.open(filename, ios_base::in);
 	if (fp)
 	{
 		/*string line, buffer;
@@ -265,43 +269,40 @@ void GLSLShader::LoadFromFile(GLenum whichShader, const string filename)
 		}		*/
 		string buffer(std::istreambuf_iterator<char>(fp), (std::istreambuf_iterator<char>()));
 		//copy to source
-		LoadFromString(whichShader, buffer);
+		return LoadFromString(whichShader, buffer.c_str());
 	}
 	else
 	{
 		cerr << "Error loading shader: " << filename << endl;
-	}
-}
-
-void GLSLShader::LoadFromFileWithPPD(GLenum whichShader, const string filename, const vector<string>& preProcessorDirectives)
-{
-	ifstream fp;
-	fp.open(filename.c_str(), ios_base::in);
-	if (fp)
-	{
-		string line, buffer;
-		vector<string>::const_iterator it;
-		for (it = preProcessorDirectives.begin(); it != preProcessorDirectives.end(); ++it)
-		{
-			buffer.append(it->c_str());
-			buffer.append("\r\n");
-		}
-
-		while (getline(fp, line))
-		{
-			buffer.append(line);
-			buffer.append("\r\n");
-		}
-		LoadFromString(whichShader, buffer);
-	}
-	else
-	{
-		cerr << "Error loading shader: " << filename << endl;
+		return false;
 	}
 }
 
 void GLSLShader::DeleteProgram()
 {
+	if (_program != 0) {
+		glDeleteProgram(_program);
+	}
+	if (_shaders[VERTEX_SHADER] != 0) {
+		glDeleteShader(_shaders[VERTEX_SHADER]);
+		_shaders[VERTEX_SHADER] = 0;
+	}
+	if (_shaders[FRAGMENT_SHADER] != 0) {
+		glDeleteShader(_shaders[FRAGMENT_SHADER]);
+		_shaders[FRAGMENT_SHADER] = 0;
+	}
+	if (_shaders[GEOMETRY_SHADER] != 0) {
+		glDeleteShader(_shaders[GEOMETRY_SHADER]);
+		_shaders[GEOMETRY_SHADER] = 0;
+	}
+	if (_shaders[TESS_CONTROL_SHADER] != 0) {
+		glDeleteShader(_shaders[TESS_CONTROL_SHADER]);
+		_shaders[TESS_CONTROL_SHADER] = 0;
+	}
+	if (_shaders[TESS_EVAL_SHADER] != 0) {
+		glDeleteShader(_shaders[TESS_EVAL_SHADER]);
+		_shaders[TESS_EVAL_SHADER] = 0;
+	}
 	glDeleteProgram(_program);
-	_program = -1;
+	_program = 0;
 }
